@@ -51,7 +51,7 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 	private PrintStream outputStream = null;
 	private BufferedReader inputSteam = null;
 	private BufferedReader console = null;
-	final static int serverPortNum = 1080;
+	final static int mainFramePort = 1080;
 	static boolean end = false;
 
 	// UDP Port used for sending and receiving object data from/to server
@@ -87,7 +87,7 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 
 	public void startClient() {
 		try {
-			connectToServer("localhost", serverPortNum);
+			connectToServer("localhost", mainFramePort);
 			startP2PServer();
 			openUDP();
 		} catch (UnknownHostException e) {
@@ -157,13 +157,12 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 	 */
 	private void startP2PServer() {
 		// Chat thread
-		if (chatServer == null) {
-			chatServer = new P2PServer(this.msgListener, this.clientListener);
-			chatServer.start();
-			// Send chat port number
-			sendMessage(Integer.toString(chatServer.getPortNum()));
-			this.isPortSent = true;
-		}
+		chatServer = new P2PServer(this.msgListener, this.clientListener);
+		chatServer.start();
+		// Send chat port number
+		sendMessage(Integer.toString(chatServer.getPortNum()));
+		this.isPortSent = true;
+
 	}
 
 	/**
@@ -286,14 +285,24 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 		JsonObject jobject = jelement.getAsJsonObject();
 		JsonObject clientJson = jobject.get("client").getAsJsonObject();
 		try {
+			try {
+				this.chatServer.serverShutdown().join();
+			} catch (InterruptedException e) {
+			}
+
 			serverDisconnect();
 			connectToServer(clientJson.get("address").getAsString(), clientJson.get("port").getAsInt());
 			this.sendMessage("newchat::" + this.userDetails.getUserName());
 			this.msgListener = this.mainConsole.onChatUserChosen(this, clientJson.get("username").getAsString());
-		} catch (UnknownHostException e1) {
-			e1.printStackTrace();
-		} catch (IOException e1) {
-			e1.printStackTrace();
+		} catch (IOException ex) {
+			System.err.println("Failed to connecti to p2p server: " + ex.getLocalizedMessage());
+			try {
+				serverDisconnect();
+				reconnectToMainFrame("localhost", this.mainFramePort);
+				this.msgListener.onNewMessage("Busy chat client, pls try again later.");
+			} catch (IOException e) {
+				System.exit(-1);
+			}
 		}
 	}
 
@@ -374,11 +383,12 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 			// Try notifying other client
 			this.chatServer.endChatting(false);
 		} else {
+			startP2PServer();
 			// Else disconnect from other client p2p server, and connect to main
 			// frame again.
 			try {
 				serverDisconnect();
-				reconnectToServer("localhost", serverPortNum);
+				reconnectToMainFrame("localhost", mainFramePort);
 			} catch (UnknownHostException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -388,7 +398,6 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 			}
 		}
 
-		this.msgListener = this.mainConsole;
 	}
 
 	private void serverDisconnect() throws IOException {
@@ -406,8 +415,10 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 		}
 	}
 
-	private void reconnectToServer(String adress, int port) throws UnknownHostException, IOException {
-		connectToServer("localhost", serverPortNum);
+	private void reconnectToMainFrame(String adress, int port) throws UnknownHostException, IOException {
+		this.msgListener = this.mainConsole;
+
+		connectToServer("localhost", mainFramePort);
 		// Send ports
 		sendMessage(Integer.toString(chatServer.getPortNum()));
 		sendMessage(Integer.toString(this.datagramPortNum));

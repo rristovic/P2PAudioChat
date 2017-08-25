@@ -17,7 +17,7 @@ import com.radojcic.util.Messages;
 public class P2PServer extends Thread {
 
 	private ServerSocket server;
-	private int port = 8877;
+	private int port = -1;
 	private InetAddress address;
 	private IClientListener.MessageReceiverListener msgListener;
 	private IClientListener.NewClientListener clientListener;
@@ -28,28 +28,29 @@ public class P2PServer extends Thread {
 	private BufferedReader clientInputStream;
 	private PrintStream clientOutputStream;
 
+	 private volatile boolean running = true;
 	public P2PServer(IClientListener.MessageReceiverListener msgListener,
 			IClientListener.NewClientListener clientListener) {
 		this.msgListener = msgListener;
 		this.clientListener = clientListener;
 		try {
-			server = new ServerSocket(0);
+			// Next available port, one max connection.
+			server = new ServerSocket(0, 1);
 			this.port = server.getLocalPort();
 			this.address = server.getInetAddress();
 		} catch (IOException ex) {
-			Logger.getLogger(P2PServer.class.getName()).log(Level.SEVERE, null, ex);
+			System.err.println("P2P Server starting error: " + ex.getLocalizedMessage());
 		}
 	}
 
 	@Override
 	public void run() {
-
 		if (this.server == null) {
 			System.out.println("Server p2p failed to start. Aborting.");
 			return;
 		}
 
-		while (true) {
+		while (running) {
 			try {
 				clientSocket = server.accept();
 				clientInputStream = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
@@ -84,7 +85,7 @@ public class P2PServer extends Thread {
 	 * @throws IOException
 	 */
 	public void endChatting(boolean notify) {
-		System.out.println("Chat has ended.");
+		System.out.println("Closoing down p2p server chat socket.");
 		if (notify) {
 			System.out.println("Notifying other client about ending.");
 			try {
@@ -107,7 +108,19 @@ public class P2PServer extends Thread {
 			}
 		} catch (IOException e) {
 		}
-		System.out.println("Clsoing down p2p server socket.");
+		System.out.println("P2P server suspended for current chat.");
+	}
+	
+	public Thread serverShutdown() {
+		System.out.println("Shutting down p2p server.");
+		this.running = false;
+		this.endChatting(false);
+		try {
+			server.close();
+		} catch (IOException e) {
+		}
+		
+		return this;
 	}
 
 	public void setMsgListener(IClientListener.MessageReceiverListener msgListener) {
