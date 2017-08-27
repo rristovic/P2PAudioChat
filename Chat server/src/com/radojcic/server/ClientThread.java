@@ -95,10 +95,7 @@ public class ClientThread extends Thread {
 			// Stream binding
 			clientInputStream = new BufferedReader(new InputStreamReader(communicationSocket.getInputStream()));
 			clientOutputStream = new PrintStream(communicationSocket.getOutputStream());
-			readPortNum();
-			System.out
-					.println(String.format("Client UDP port:%d, Chat port:%d", clientUdpPortNumb, clientChatPortNumb));
-
+			
 			sendMsgToClient("Dobrodosli na SukiChatting. Molimo vas unesite vase korisnicke podatke.");
 			// Populate clients info
 			String[] userInfo = readUserInfo();
@@ -199,10 +196,16 @@ public class ClientThread extends Thread {
 
 			JsonElement jelement = new JsonParser().parse(line.substring(line.indexOf("::") + 2));
 			JsonObject jobject = jelement.getAsJsonObject();
+			
+			this.clientChatPortNumb = jobject.get("chatPort").getAsInt();
+			this.clientUdpPortNumb = jobject.get("udpPort").getAsInt();
+			System.out
+			.println(String.format("Client UDP port:%d, Chat port:%d", clientUdpPortNumb, clientChatPortNumb));
 
-			userName = jobject.get("userName").getAsString();
-			firstName = jobject.get("firstName").getAsString();
-			lastName = jobject.get("lastName").getAsString();
+			JsonObject userObject = jobject.get("user").getAsJsonObject();
+			userName = userObject.get("userName").getAsString();
+			firstName = userObject.get("firstName").getAsString();
+			lastName = userObject.get("lastName").getAsString();
 
 			if (!this.isValidName(userName)) {
 				sendMsgToClient("Uneli ste nevalidno korisnicko ime. Probajte ponovo!");
@@ -354,7 +357,7 @@ public class ClientThread extends Thread {
 	 */
 	protected String readMsgFromClient() throws IOException {
 		mLine = clientInputStream.readLine();
-		return mLine.trim();
+		return mLine;
 	}
 
 	/**

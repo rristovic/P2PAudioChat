@@ -93,7 +93,7 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 			connectToServer("localhost", mainFramePort);
 			startP2PServer();
 			openUDP();
-			sendPorts();
+//			sendPorts();
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 			System.exit(-1);
@@ -357,7 +357,7 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 
 	@Override
 	public void onLogin(UserDetails userDetails) {
-		sendMessage(Messages.loginReqMsg(userDetails));
+		sendLoginDetails(userDetails);
 	}
 
 	@Override
@@ -453,20 +453,11 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 
 		connectToServer("localhost", mainFramePort);
 		// Send login details
-		sendLoginDetails();
+		sendLoginDetails(this.userDetails);
 	}
 
-	private void sendLoginDetails() {
-		// Send ports
-		sendPorts();
-		try {
-			Thread.sleep(500);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		// Send login user info
-		sendMessage(Messages.loginReqMsg(this.userDetails));
+	private void sendLoginDetails(UserDetails userDetails) {
+		sendMessage(Messages.loginReqMsg(userDetails, this.chatServer.getPortNum(), this.datagramPortNum));
 	}
 
 	private void sendPorts() {
