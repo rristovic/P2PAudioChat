@@ -138,13 +138,13 @@ public class ClientThread extends Thread {
 			}
 
 		} catch (ClientDisconectedException e) {
-			// e.printStackTrace();
+//			 e.printStackTrace();
 		} catch (SocketException e) {
-			// e.printStackTrace();
+			 e.printStackTrace();
 		} catch (IOException e) {
-			// e.printStackTrace();
+//			 e.printStackTrace();
 		} catch (RuntimeException e) {
-			// e.printStackTrace();
+//			 e.printStackTrace();
 		} finally {
 			try {
 				if (this.communicationSocket != null)
@@ -186,6 +186,12 @@ public class ClientThread extends Thread {
 	private String[] readUserInfo() throws IOException, RuntimeException {
 		String userName = null, firstName = null, lastName = null;
 
+		// Localhost firewall problem hotfix
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 		String line = clientInputStream.readLine().trim();
 		boolean success = false;
 		while (!success) {
@@ -348,7 +354,7 @@ public class ClientThread extends Thread {
 	 */
 	protected String readMsgFromClient() throws IOException {
 		mLine = clientInputStream.readLine();
-		return mLine;
+		return mLine.trim();
 	}
 
 	/**

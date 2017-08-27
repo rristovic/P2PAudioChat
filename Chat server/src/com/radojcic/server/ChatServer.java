@@ -51,6 +51,15 @@ public class ChatServer extends AbstractClientManager implements IClientMessagin
 		if (ct.currentClient != null)
 			super.removeClient(ct.currentClient);
 		clients.remove(ct);
+		
+		for (ClientThread c : clients) {
+			if (c.currentClient != null)
+				try {
+					c.sendRecipientClients();
+				} catch (Exception e) {
+				}
+		}
+		
 	}
 
 	@Override
