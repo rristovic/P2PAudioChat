@@ -11,5 +11,7 @@ public abstract class Messages {
 //	public static String loginReqMsg(UserDetails ud){
 //		return String.format("login::%s", ud.toJSON());
 //	}
+	public static final String MAINFRAME_END_REQ = "mainframedisconnect::";
+
 
 }

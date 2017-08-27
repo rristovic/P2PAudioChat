@@ -56,7 +56,10 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 
 	// UDP Port used for sending and receiving object data from/to server
 	private DatagramSocket datagramSocket;
-	private Integer datagramPortNum = -1;
+	private volatile Integer datagramPortNum = -1;
+
+	// Lock to wait for all ports to be populated
+	private Object portLock;
 
 	// Message receiver thread used to receive messages from chat buddy
 	private P2PServer chatServer;
@@ -90,6 +93,7 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 			connectToServer("localhost", mainFramePort);
 			startP2PServer();
 			openUDP();
+			sendPorts();
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 			System.exit(-1);
@@ -120,6 +124,7 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
+				Thread.currentThread().setName("TCP Thread");
 				String msg;
 				try {
 					while ((msg = inputSteam.readLine()) != null) {
@@ -160,8 +165,8 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 		chatServer = new P2PServer(this.msgListener, this.clientListener);
 		chatServer.start();
 		// Send chat port number
-		sendMessage(Integer.toString(chatServer.getPortNum()));
-		this.isPortSent = true;
+		// sendMessage(Integer.toString(chatServer.getPortNum()));
+		// this.isPortSent = true;
 
 	}
 
@@ -174,17 +179,18 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 			new Thread(new Runnable() {
 				@Override
 				public void run() {
+					Thread.currentThread().setName("UDP Thread");
 					try {
 						datagramSocket = new DatagramSocket();
 						datagramPortNum = datagramSocket.getLocalPort();
 						// Send UDP port number
-						while (!isPortSent) {
-							try {
-								Thread.sleep(100);
-							} catch (InterruptedException e) {
-							}
-						}
-						sendMessage(datagramPortNum.toString());
+						// while (!isPortSent) {
+						// try {
+						// Thread.sleep(100);
+						// } catch (InterruptedException e) {
+						// }
+						// }
+						// sendMessage(datagramPortNum.toString());
 						while (true)
 							receive();
 					} catch (SocketException e) {
@@ -290,14 +296,14 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 			} catch (InterruptedException e) {
 			}
 
-			serverDisconnect();
+			serverDisconnect(true);
 			connectToServer(clientJson.get("address").getAsString(), clientJson.get("port").getAsInt());
 			this.sendMessage("newchat::" + this.userDetails.getUserName());
 			this.msgListener = this.mainConsole.onChatUserChosen(this, clientJson.get("username").getAsString());
 		} catch (IOException ex) {
 			System.err.println("Failed to connecti to p2p server: " + ex.getLocalizedMessage());
 			try {
-				serverDisconnect();
+				serverDisconnect(false);
 				reconnectToMainFrame("localhost", this.mainFramePort);
 				this.msgListener.onNewMessage("Busy chat client, pls try again later.");
 			} catch (IOException e) {
@@ -359,8 +365,21 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 		if (outputStream != null) {
 			outputStream.println(message);
 			outputStream.flush();
-		} else
+		} else {
+			if (message.equals(Messages.GET_CLIENTS_REQ)) {
+				try {
+					this.reconnectToMainFrame("localhost", this.mainFramePort);
+				} catch (UnknownHostException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
 			throw new ConnectionErrorException("Server not responding");
+			
+		}
 	}
 
 	/**
@@ -386,32 +405,46 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 			startP2PServer();
 			// Else disconnect from other client p2p server, and connect to main
 			// frame again.
-			try {
-				serverDisconnect();
-				reconnectToMainFrame("localhost", mainFramePort);
-			} catch (UnknownHostException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			serverDisconnect(false);
 		}
 
+		try {
+			reconnectToMainFrame("localhost", mainFramePort);
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
-	private void serverDisconnect() throws IOException {
-		if (this.communicationSocket != null) {
-			this.communicationSocket.close();
-			this.communicationSocket = null;
+	/**
+	 * Disconnects from the server.
+	 * 
+	 * @param mainframe
+	 *            - true if should disconnect from main frame server.
+	 */
+	private void serverDisconnect(boolean mainframe) {
+		if (mainframe) {
+			sendMessage(Messages.MAINFRAME_END_REQ);
 		}
+		try {
+			if (this.communicationSocket != null)
+				this.communicationSocket.close();
+			this.communicationSocket = null;
+		} catch (IOException e) {
+		}
+
 		if (this.outputStream != null) {
 			this.outputStream.close();
 			this.outputStream = null;
 		}
-		if (this.inputSteam != null) {
-			this.inputSteam.close();
+		try {
+			if (this.inputSteam != null)
+				this.inputSteam.close();
 			this.inputSteam = null;
+		} catch (IOException e) {
 		}
 	}
 
@@ -419,11 +452,34 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 		this.msgListener = this.mainConsole;
 
 		connectToServer("localhost", mainFramePort);
+		// Send login details
+		sendLoginDetails();
+	}
+
+	private void sendLoginDetails() {
 		// Send ports
-		sendMessage(Integer.toString(chatServer.getPortNum()));
-		sendMessage(Integer.toString(this.datagramPortNum));
+		sendPorts();
+		try {
+			Thread.sleep(500);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		// Send login user info
 		sendMessage(Messages.loginReqMsg(this.userDetails));
+	}
+
+	private void sendPorts() {
+		if (datagramPortNum == -1) {
+			try {
+				Thread.sleep(500);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+
+		sendMessage(
+				String.format("ports::{\"chatPort\":%d, \"udpPort\":%d}", chatServer.getPortNum(), datagramPortNum));
 	}
 
 	@Override
@@ -434,6 +490,7 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 	@Override
 	public MessageReceiverListener onNewChat(IMessageSender msgSender, String message, String chatBuddyName) {
 		// Intercept new chat request
+		this.serverDisconnect(true);
 		this.isUsingServerChat = true;
 		return this.mainConsole.onNewChat(msgSender, message, chatBuddyName);
 	}

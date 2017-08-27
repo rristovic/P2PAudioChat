@@ -45,6 +45,7 @@ public class P2PServer extends Thread {
 
 	@Override
 	public void run() {
+		Thread.currentThread().setName("p2p server thread");
 		if (this.server == null) {
 			System.out.println("Server p2p failed to start. Aborting.");
 			return;

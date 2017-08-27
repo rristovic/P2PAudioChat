@@ -37,7 +37,7 @@ public class ChatServer extends AbstractClientManager implements IClientMessagin
 				if (clients.size() < 10) {
 					ClientThread t = new ClientThread(clientSocket, this, this, this);
 					t.start();
-					
+
 					clients.add(t);
 				}
 			}
@@ -96,7 +96,7 @@ public class ChatServer extends AbstractClientManager implements IClientMessagin
 	public void onClientUnavailable(ClientThread ct) {
 		super.findClientByUsername(ct.currentClient.getUserName()).setAvailable(false);
 	}
-	
+
 	@Override
 	public void onClientAvailable(ClientThread ct) {
 		super.findClientByUsername(ct.currentClient.getUserName()).setAvailable(true);
@@ -104,12 +104,13 @@ public class ChatServer extends AbstractClientManager implements IClientMessagin
 
 	@Override
 	public void onNewClient(Client client) {
-		for (ClientThread ct : clients) {
-			if(!ct.currentClient.equals(client))
-				try {
-					ct.sendRecipientClients();
-				} catch (IOException e) {
-				}
-		}		
+			for (ClientThread ct : clients) {
+				if (ct.currentClient != null && !ct.currentClient.equals(client))
+					try {
+						ct.sendRecipientClients();
+					} catch (IOException e) {
+					}
+			}
+		
 	}
 }

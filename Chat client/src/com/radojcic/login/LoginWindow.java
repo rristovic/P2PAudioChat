@@ -19,7 +19,6 @@ import javax.swing.SwingUtilities;
 import com.radojcic.gui.MainConsole;
 import com.radojcic.networking.IClientListener;
 
-import net.miginfocom.swing.MigLayout;
 
 /**
 *
