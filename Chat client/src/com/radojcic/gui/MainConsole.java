@@ -36,12 +36,12 @@ import javax.swing.event.ListSelectionListener;
 import javax.swing.text.DefaultCaret;
 
 import com.radojcic.networking.IClientListener;
-import com.radojcic.networking.IClientListener.ClientChatEndListener;
+import com.radojcic.networking.IClientListener.ClientChatListener;
 import com.radojcic.networking.IMessageSender;
 import com.radojcic.util.Messages;
 
 public class MainConsole extends JFrame
-		implements IClientListener.NewClientListener, IClientListener.MessageReceiverListener {
+		implements IClientListener.NewClientListener, IClientListener.MessageListener {
 
 	// Variables declaration - do not modify
 	private javax.swing.JButton btnExit;
@@ -59,7 +59,7 @@ public class MainConsole extends JFrame
 
 	// New chat widnow field
 	private ChatWindow chatWindow;
-	private ClientChatEndListener chatEndListener;
+	private ClientChatListener chatEndListener;
 
 	public MainConsole(IMessageSender msgSender) {
 		super("Sukisa InstantMessenger");
@@ -106,10 +106,9 @@ public class MainConsole extends JFrame
 				MainConsole.this.mMessageWindow.append(message + "\n");
 			}
 		});
-
 	}
 
-	public IClientListener.MessageReceiverListener onChatUserChosen(IMessageSender msgSender, String userName) {
+	public IClientListener.MessageListener onChatUserChosen(IMessageSender msgSender, String userName) {
 		try {
 			SwingUtilities.invokeAndWait(new Runnable() {
 				@Override
@@ -143,7 +142,7 @@ public class MainConsole extends JFrame
 	}
 
 	@Override
-	public IClientListener.MessageReceiverListener onNewChat(IMessageSender msgSender, String message,
+	public IClientListener.MessageListener onNewChat(IMessageSender msgSender, String message,
 			String chatBuddyName) {
 		try {
 			SwingUtilities.invokeAndWait(new Runnable() {
@@ -182,7 +181,7 @@ public class MainConsole extends JFrame
 			this.chatEndListener.onChatEnded();
 	}
 
-	public void setChatEndListener(IClientListener.ClientChatEndListener chatEndListener) {
+	public void setChatEndListener(IClientListener.ClientChatListener chatEndListener) {
 		this.chatEndListener = chatEndListener;
 	}
 	

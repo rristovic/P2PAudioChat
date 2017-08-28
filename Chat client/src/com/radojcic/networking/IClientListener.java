@@ -7,7 +7,7 @@ import java.net.InetAddress;
  */
 public interface IClientListener {
 
-	public interface MessageReceiverListener {
+	public interface MessageListener {
 		/**
 		 * Called when new message has arrived from server.
 		 * 
@@ -17,7 +17,7 @@ public interface IClientListener {
 		void onNewMessage(final String message);
 	}
 	
-	public interface ClientChatEndListener {
+	public interface ClientChatListener {
 		/**
 		 * Called when chat has ended.
 		 */
@@ -30,9 +30,9 @@ public interface IClientListener {
 		 * 
 		 * @param message
 		 *            - new message that client has sent.
-		 * @return {@link MessageReceiverListener} object which will listen to
+		 * @return {@link MessageListener} object which will listen to
 		 *         new chat messages.
 		 */
-		MessageReceiverListener onNewChat(IMessageSender msgSender, final String message, final String chatBuddyName);
+		MessageListener onNewChat(IMessageSender msgSender, final String message, final String chatBuddyName);
 	}
 }

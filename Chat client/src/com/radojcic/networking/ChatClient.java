@@ -29,14 +29,14 @@ import com.radojcic.gui.MainConsole;
 import com.radojcic.login.LoginWindow;
 import com.radojcic.login.LoginListener;
 import com.radojcic.login.UserDetails;
-import com.radojcic.networking.IClientListener.MessageReceiverListener;
+import com.radojcic.networking.IClientListener.MessageListener;
 import com.radojcic.networking.error.ConnectionErrorException;
 import com.radojcic.util.Messages;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 public class ChatClient implements IMessageSender, IClientListener.NewClientListener,
-		IClientListener.ClientChatEndListener, LoginListener {
+		IClientListener.ClientChatListener, LoginListener {
 
 	// GUI
 	MainConsole mainConsole;
@@ -44,7 +44,7 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 
 	// Message listener to listen on server messages, binds to main console
 	IClientListener.NewClientListener clientListener;
-	IClientListener.MessageReceiverListener msgListener;
+	IClientListener.MessageListener msgListener;
 
 	// Communication socket/streams from/to server
 	private Socket communicationSocket = null;
@@ -81,19 +81,19 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 		this.msgListener = loginConsole;
 	};
 
-	public ChatClient(IClientListener.MessageReceiverListener msgListener,
-			IClientListener.NewClientListener clientListener) {
-		super();
-		this.msgListener = msgListener;
-		this.clientListener = clientListener;
-	};
+	// public ChatClient(IClientListener.MessageListener msgListener,
+	// IClientListener.NewClientListener clientListener) {
+	// super();
+	// this.msgListener = msgListener;
+	// this.clientListener = clientListener;
+	// };
 
 	public void startClient() {
 		try {
 			connectToServer("localhost", mainFramePort);
 			startP2PServer();
 			openUDP();
-//			sendPorts();
+			// sendPorts();
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 			System.exit(-1);
@@ -115,7 +115,7 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 	 */
 	private void connectToServer(String adress, int port) throws UnknownHostException, IOException {
 		communicationSocket = new Socket(adress, port);
-		console = new BufferedReader(new InputStreamReader(System.in));
+		// console = new BufferedReader(new InputStreamReader(System.in));
 		outputStream = new PrintStream(communicationSocket.getOutputStream());
 		inputSteam = new BufferedReader(new InputStreamReader(communicationSocket.getInputStream()));
 		System.out.println("Connection to server open on port:" + communicationSocket.getPort());
@@ -139,22 +139,23 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 							communicationSocket.close();
 							communicationSocket = null;
 						}
-						if (outputStream != null) {
-							outputStream.close();
-							outputStream = null;
-						}
+					} catch (IOException e1) {
+					}
+					if (outputStream != null) {
+						outputStream.close();
+						outputStream = null;
+					}
+					try {
 						if (inputSteam != null) {
 							inputSteam.close();
 							inputSteam = null;
 						}
 					} catch (IOException e1) {
 					}
-					communicationSocket = null;
-					outputStream = null;
-					inputSteam = null;
 				}
 			}
 		}).start();
+
 	}
 
 	/**
@@ -267,6 +268,7 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 		}
 
 		// this.onNewMessage(string.toString());
+		// Implement later with Object.wait() & Object.notify()?????
 		while (this.mainConsole == null) {
 			try {
 				Thread.sleep(50);
@@ -316,7 +318,7 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 	 * Temporary message buffer for delayed messages arrived when switching from
 	 * LoginForm to MainConsole.
 	 */
-	static class msgRec implements IClientListener.MessageReceiverListener {
+	static class msgRec implements IClientListener.MessageListener {
 		static msgRec instance = new msgRec();
 		static final List<String> msgBuffer = new LinkedList();
 
@@ -378,7 +380,7 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 				}
 			}
 			throw new ConnectionErrorException("Server not responding");
-			
+
 		}
 	}
 
@@ -479,7 +481,7 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 	}
 
 	@Override
-	public MessageReceiverListener onNewChat(IMessageSender msgSender, String message, String chatBuddyName) {
+	public MessageListener onNewChat(IMessageSender msgSender, String message, String chatBuddyName) {
 		// Intercept new chat request
 		this.serverDisconnect(true);
 		this.isUsingServerChat = true;

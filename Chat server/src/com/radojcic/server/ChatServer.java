@@ -22,6 +22,8 @@ public class ChatServer extends AbstractClientManager implements IClientMessagin
 
 	// static ServerThread clients[] = new ServerThread[10];
 	private List<ClientThread> clients = new LinkedList<>();
+	
+	private final int MAX_CLIENTS = 10;
 
 	public void start(String args[]) {
 		// Initialize vars
@@ -34,7 +36,7 @@ public class ChatServer extends AbstractClientManager implements IClientMessagin
 			while (true) {
 				clientSocket = serverSocket.accept();
 
-				if (clients.size() < 10) {
+				if (clients.size() < MAX_CLIENTS) {
 					ClientThread t = new ClientThread(clientSocket, this, this, this);
 					t.start();
 
@@ -78,7 +80,6 @@ public class ChatServer extends AbstractClientManager implements IClientMessagin
 				}
 			}
 		}
-
 		return clientsReceived;
 	}
 

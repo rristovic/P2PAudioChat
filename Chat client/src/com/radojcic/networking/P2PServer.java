@@ -11,7 +11,7 @@ import java.net.Socket;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import com.radojcic.networking.IClientListener.MessageReceiverListener;
+import com.radojcic.networking.IClientListener.MessageListener;
 import com.radojcic.util.Messages;
 
 public class P2PServer extends Thread {
@@ -19,7 +19,7 @@ public class P2PServer extends Thread {
 	private ServerSocket server;
 	private int port = -1;
 	private InetAddress address;
-	private IClientListener.MessageReceiverListener msgListener;
+	private IClientListener.MessageListener msgListener;
 	private IClientListener.NewClientListener clientListener;
 
 	private Socket clientSocket;
@@ -29,7 +29,7 @@ public class P2PServer extends Thread {
 	private PrintStream clientOutputStream;
 
 	 private volatile boolean running = true;
-	public P2PServer(IClientListener.MessageReceiverListener msgListener,
+	public P2PServer(IClientListener.MessageListener msgListener,
 			IClientListener.NewClientListener clientListener) {
 		this.msgListener = msgListener;
 		this.clientListener = clientListener;
@@ -62,7 +62,7 @@ public class P2PServer extends Thread {
 					if (msg.startsWith("newchat::")) {
 						this.chatBuddy = msg.substring(msg.indexOf("::") + 2);
 						SimpleMessageSender sender = new SimpleMessageSender(clientOutputStream);
-						MessageReceiverListener listener = clientListener.onNewChat(sender, "", this.chatBuddy);
+						MessageListener listener = clientListener.onNewChat(sender, "", this.chatBuddy);
 						this.msgListener = listener;
 					} else {
 						msgListener.onNewMessage(msg);
@@ -124,7 +124,7 @@ public class P2PServer extends Thread {
 		return this;
 	}
 
-	public void setMsgListener(IClientListener.MessageReceiverListener msgListener) {
+	public void setMsgListener(IClientListener.MessageListener msgListener) {
 		this.msgListener = msgListener;
 	}
 

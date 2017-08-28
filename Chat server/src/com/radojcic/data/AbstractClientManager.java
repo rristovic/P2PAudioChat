@@ -17,7 +17,6 @@ public abstract class AbstractClientManager implements IClientManager {
 	private AtomicInteger counter = new AtomicInteger(0);
 	private Map<String, Client> clients;
 
-	private Object mLock;
 
 	public AbstractClientManager() {
 		this.clients = new ConcurrentHashMap<String, Client>();

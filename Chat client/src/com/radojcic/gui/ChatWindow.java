@@ -31,7 +31,7 @@ import com.radojcic.networking.IMessageSender;
 import com.radojcic.networking.error.ConnectionErrorException;
 import com.radojcic.util.Messages;
 
-public class ChatWindow extends JFrame implements IClientListener.MessageReceiverListener {
+public class ChatWindow extends JFrame implements IClientListener.MessageListener {
 
 	  // Variables declaration - do not modify                     
     private javax.swing.JPanel jPanel1;

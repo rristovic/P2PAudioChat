@@ -95,7 +95,7 @@ public class ClientThread extends Thread {
 			// Stream binding
 			clientInputStream = new BufferedReader(new InputStreamReader(communicationSocket.getInputStream()));
 			clientOutputStream = new PrintStream(communicationSocket.getOutputStream());
-			
+
 			sendMsgToClient("Dobrodosli na SukiChatting. Molimo vas unesite vase korisnicke podatke.");
 			// Populate clients info
 			String[] userInfo = readUserInfo();
@@ -116,7 +116,7 @@ public class ClientThread extends Thread {
 
 				while ((msg = readMsgFromClient()) != null) {
 					msg = msg.trim();
-					if(msg.startsWith(Messages.MAINFRAME_END_REQ)) {
+					if (msg.startsWith(Messages.MAINFRAME_END_REQ)) {
 						throw new ClientDisconectedException("Client went offline.");
 					}
 					if (msg.startsWith(Messages.GET_CLIENTS_REQ)) {
@@ -129,19 +129,19 @@ public class ClientThread extends Thread {
 							|| !clientToTalkWith.isAvailable()) {
 						sendMsgToClient("No user found with that name, pls try again.");
 						continue;
-					}
-					sendClientInfo(clientToTalkWith, clientUdpPortNumb);
+					} else
+						sendClientInfo(clientToTalkWith, clientUdpPortNumb);
 				}
 			}
 
 		} catch (ClientDisconectedException e) {
-//			 e.printStackTrace();
+			// e.printStackTrace();
 		} catch (SocketException e) {
-			 e.printStackTrace();
+			//e.printStackTrace();
 		} catch (IOException e) {
-//			 e.printStackTrace();
+			// e.printStackTrace();
 		} catch (RuntimeException e) {
-//			 e.printStackTrace();
+			// e.printStackTrace();
 		} finally {
 			try {
 				if (this.communicationSocket != null)
@@ -156,6 +156,11 @@ public class ClientThread extends Thread {
 					this.clientInputStream.close();
 				} catch (IOException e) {
 				}
+
+			if (this.reportStream != null) {
+				reportStream.flush();
+				reportStream.close();
+			}
 			this.communicationSocket = null;
 			this.clientInputStream = null;
 			this.clientOutputStream = null;
@@ -183,12 +188,6 @@ public class ClientThread extends Thread {
 	private String[] readUserInfo() throws IOException, RuntimeException {
 		String userName = null, firstName = null, lastName = null;
 
-		// Localhost firewall problem hotfix
-		try {
-			Thread.sleep(1000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
 		String line = clientInputStream.readLine().trim();
 		boolean success = false;
 		while (!success) {
@@ -196,11 +195,11 @@ public class ClientThread extends Thread {
 
 			JsonElement jelement = new JsonParser().parse(line.substring(line.indexOf("::") + 2));
 			JsonObject jobject = jelement.getAsJsonObject();
-			
+
 			this.clientChatPortNumb = jobject.get("chatPort").getAsInt();
 			this.clientUdpPortNumb = jobject.get("udpPort").getAsInt();
 			System.out
-			.println(String.format("Client UDP port:%d, Chat port:%d", clientUdpPortNumb, clientChatPortNumb));
+					.println(String.format("Client UDP port:%d, Chat port:%d", clientUdpPortNumb, clientChatPortNumb));
 
 			JsonObject userObject = jobject.get("user").getAsJsonObject();
 			userName = userObject.get("userName").getAsString();

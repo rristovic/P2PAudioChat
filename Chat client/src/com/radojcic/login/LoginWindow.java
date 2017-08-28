@@ -22,9 +22,8 @@ import com.radojcic.networking.IClientListener;
 
 /**
 *
-* @author rristovic
 */
-public class LoginWindow extends javax.swing.JFrame implements IClientListener.MessageReceiverListener {
+public class LoginWindow extends javax.swing.JFrame implements IClientListener.MessageListener {
 
    // New chat widnow field
    private LoginListener loginListener;
@@ -57,6 +56,7 @@ public class LoginWindow extends javax.swing.JFrame implements IClientListener.M
    public void onNewMessage(String message) {
        if (message.contains("loginsuccess::")) {
            loginListener.onLoginComplete(ud);
+           return;
        }
 
        SwingUtilities.invokeLater(new Runnable() {
