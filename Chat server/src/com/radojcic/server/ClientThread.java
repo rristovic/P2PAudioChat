@@ -356,7 +356,7 @@ public class ClientThread extends Thread {
 	 */
 	protected String readMsgFromClient() throws IOException {
 		mLine = clientInputStream.readLine();
-		return mLine;
+		return mLine.trim();
 	}
 
 	/**

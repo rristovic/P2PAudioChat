@@ -294,4 +294,9 @@ public class MainConsole extends JFrame
 		msgSender.sendMessage(Messages.GET_CLIENTS_REQ);
 	}
 
+	@Override
+	public void onNewMessage(byte[] audioMessage) {
+		throw new RuntimeException("Method not implemented.");
+	}
+
 }

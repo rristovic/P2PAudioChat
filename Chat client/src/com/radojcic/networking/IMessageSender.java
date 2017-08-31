@@ -12,5 +12,5 @@ public interface IMessageSender {
 	 */
 	void sendMessage(String message) throws ConnectionErrorException;
 	
-	void sendData(Object object) throws ConnectionErrorException;
+	void sendSoundData(byte[] object, String msgName) throws ConnectionErrorException;
 }

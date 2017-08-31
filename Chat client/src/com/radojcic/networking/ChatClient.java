@@ -2,6 +2,7 @@ package com.radojcic.networking;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOError;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -31,6 +32,7 @@ import com.radojcic.login.LoginListener;
 import com.radojcic.login.UserDetails;
 import com.radojcic.networking.IClientListener.MessageListener;
 import com.radojcic.networking.error.ConnectionErrorException;
+import com.radojcic.networking.util.AudioMessageUtil;
 import com.radojcic.util.Messages;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -129,7 +131,11 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 				try {
 					while ((msg = inputSteam.readLine()) != null) {
 						System.out.println(msg);
-						ChatClient.this.onNewMessage(msg);
+						// Reads audio message
+						if (msg.startsWith(Messages.AUDIO_MSG_REQ)) {
+							AudioMessageUtil.downloadAudioMessage(communicationSocket, msgListener);
+						} else
+							ChatClient.this.onNewMessage(msg);
 					}
 				} catch (IOException e) {
 					System.err.println("Connection to server closed. " + e.getLocalizedMessage());
@@ -165,10 +171,6 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 		// Chat thread
 		chatServer = new P2PServer(this.msgListener, this.clientListener);
 		chatServer.start();
-		// Send chat port number
-		// sendMessage(Integer.toString(chatServer.getPortNum()));
-		// this.isPortSent = true;
-
 	}
 
 	/**
@@ -184,14 +186,6 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 					try {
 						datagramSocket = new DatagramSocket();
 						datagramPortNum = datagramSocket.getLocalPort();
-						// Send UDP port number
-						// while (!isPortSent) {
-						// try {
-						// Thread.sleep(100);
-						// } catch (InterruptedException e) {
-						// }
-						// }
-						// sendMessage(datagramPortNum.toString());
 						while (true)
 							receive();
 					} catch (SocketException e) {
@@ -325,6 +319,11 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 		@Override
 		public void onNewMessage(String message) {
 			msgBuffer.add(message);
+		}
+
+		@Override
+		public void onNewMessage(byte[] msg) {
+			throw new RuntimeException("Method not implemented.");
 		}
 	}
 
@@ -476,8 +475,11 @@ public class ChatClient implements IMessageSender, IClientListener.NewClientList
 	}
 
 	@Override
-	public void sendData(Object object) {
-		throw new RuntimeException("Method not implemented.");
+	public void sendSoundData(byte[] object, String msgName) {
+		try {
+			AudioMessageUtil.sendAudioMessage(this.communicationSocket.getOutputStream(), object, msgName);
+		} catch (IOException e) {
+		}
 	}
 
 	@Override

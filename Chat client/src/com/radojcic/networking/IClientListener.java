@@ -15,6 +15,7 @@ public interface IClientListener {
 		 *            retrieved from server.
 		 */
 		void onNewMessage(final String message);
+		void onNewMessage(final byte[] audioMessage);		
 	}
 	
 	public interface ClientChatListener {

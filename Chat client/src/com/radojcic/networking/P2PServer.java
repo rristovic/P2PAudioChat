@@ -1,6 +1,7 @@
 package com.radojcic.networking;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -12,6 +13,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.radojcic.networking.IClientListener.MessageListener;
+import com.radojcic.networking.util.AudioMessageUtil;
 import com.radojcic.util.Messages;
 
 public class P2PServer extends Thread {
@@ -28,9 +30,9 @@ public class P2PServer extends Thread {
 	private BufferedReader clientInputStream;
 	private PrintStream clientOutputStream;
 
-	 private volatile boolean running = true;
-	public P2PServer(IClientListener.MessageListener msgListener,
-			IClientListener.NewClientListener clientListener) {
+	private volatile boolean running = true;
+
+	public P2PServer(IClientListener.MessageListener msgListener, IClientListener.NewClientListener clientListener) {
 		this.msgListener = msgListener;
 		this.clientListener = clientListener;
 		try {
@@ -59,7 +61,10 @@ public class P2PServer extends Thread {
 				String msg = "";
 
 				while ((msg = clientInputStream.readLine()) != null) {
-					if (msg.startsWith("newchat::")) {
+					if (msg.startsWith(Messages.AUDIO_MSG_REQ)) {
+						// Read audio message
+						AudioMessageUtil.downloadAudioMessage(clientSocket, msgListener);
+					} else if (msg.startsWith("newchat::")) {
 						this.chatBuddy = msg.substring(msg.indexOf("::") + 2);
 						SimpleMessageSender sender = new SimpleMessageSender(clientOutputStream);
 						MessageListener listener = clientListener.onNewChat(sender, "", this.chatBuddy);
@@ -111,7 +116,7 @@ public class P2PServer extends Thread {
 		}
 		System.out.println("P2P server suspended for current chat.");
 	}
-	
+
 	public Thread serverShutdown() {
 		System.out.println("Shutting down p2p server.");
 		this.running = false;
@@ -120,7 +125,7 @@ public class P2PServer extends Thread {
 			server.close();
 		} catch (IOException e) {
 		}
-		
+
 		return this;
 	}
 

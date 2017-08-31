@@ -1,52 +1,41 @@
 package com.radojcic.networking;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.Socket;
 
 import com.radojcic.networking.error.ConnectionErrorException;
+import com.radojcic.networking.util.AudioMessageUtil;
+import com.radojcic.util.Messages;
 
 public class SimpleMessageSender implements IMessageSender {
 
-	private Socket communicationSocket;
 	private BufferedReader console;
-	private PrintStream outputStream;
-	private BufferedReader inputSteam;
+	private OutputStream outputStream;
+	private PrintStream stringOutputStream;
 	
-	public SimpleMessageSender(String adress, int port) {
-		try {
-			communicationSocket = new Socket(adress, port);
-			console = new BufferedReader(new InputStreamReader(System.in));
-			outputStream = new PrintStream(communicationSocket.getOutputStream());
-			inputSteam = new BufferedReader(new InputStreamReader(communicationSocket.getInputStream()));
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	public SimpleMessageSender(PrintStream outputStream) {
+	public SimpleMessageSender(OutputStream outputStream) {
 		this.outputStream = outputStream;
+		stringOutputStream = new PrintStream(outputStream);
 	}
-	
-	public BufferedReader getInputStream() {
-		return this.inputSteam;
-	}
+
 
 	@Override
 	public void sendMessage(String message) throws ConnectionErrorException{
 		if (outputStream != null)
-			outputStream.println(message);
+			stringOutputStream.println(message);
 		else
 			throw new ConnectionErrorException("Client has gone offline.");
 	}
 
 	@Override
-	public void sendData(Object object) {
-		// TODO Auto-generated method stub
-
+	public void sendSoundData(byte[] object, String msgName) {
+		AudioMessageUtil.sendAudioMessage(outputStream, object, msgName);
 	}
 
 }
