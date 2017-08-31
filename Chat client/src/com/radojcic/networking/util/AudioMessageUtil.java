@@ -2,6 +2,7 @@ package com.radojcic.networking.util;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.Socket;
@@ -17,15 +18,16 @@ public class AudioMessageUtil {
 			byte[] buffer = new byte[1024];
 			ByteArrayOutputStream ba = new ByteArrayOutputStream();
 			int bytesRead = 0;
-			while ((bytesRead = communicationSocket.getInputStream().read(buffer)) >= 0) {
+			InputStream inputStream = communicationSocket.getInputStream();
+			while ((bytesRead = inputStream.read(buffer)) >= 0) {
 				if (Messages.isEndSoundMsg(buffer))
 					break;
 				for (int i = 0; i < bytesRead; i++) {
 					ba.write(buffer[i]);
 				}
-			}
-			msgListener.onNewMessage("New audio message.");
+			}			
 			msgListener.onNewMessage(ba.toByteArray());
+			
 		} catch (IOException e) {
 			System.err.println("Failed to receive audio message: " + e.getLocalizedMessage());
 		}

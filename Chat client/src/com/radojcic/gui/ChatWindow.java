@@ -1,10 +1,15 @@
 package com.radojcic.gui;
 
+import java.awt.AWTEvent;
+import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.ByteArrayOutputStream;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
@@ -13,7 +18,14 @@ import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 import javax.sound.sampled.TargetDataLine;
 import javax.swing.JFrame;
+import javax.swing.JScrollBar;
 import javax.swing.SwingUtilities;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Element;
+import javax.swing.text.SimpleAttributeSet;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyledDocument;
 
 import com.radojcic.networking.IClientListener;
 import com.radojcic.networking.IMessageSender;
@@ -24,24 +36,29 @@ public class ChatWindow extends JFrame implements IClientListener.MessageListene
 
 	// Variables declaration - do not modify
 	private javax.swing.JPanel jPanel1;
-	private javax.swing.JScrollPane jScrollPane1;
+	// private javax.swing.JScrollPane jScrollPane1;
 	private javax.swing.JTextField mNewMsgArea;
-	private javax.swing.JTextArea mMessagesWindow;
+	// private javax.swing.JTextArea mMessagesWindow;
 	private javax.swing.JButton mRecord;
 	private javax.swing.JButton mSend;
 	private javax.swing.JButton mStop;
-	// End of variables declaration
 
+	private javax.swing.JScrollPane jScrollPane;
+	private javax.swing.JTextPane mMessagesWindow;
+	// End of variables declaration
 
 	private IMessageSender msgSender;
 	private String chatBuddyName;
 	private boolean chatEnded;
-	
+
+	Map<Integer, byte[]> audioMessages = new HashMap<Integer, byte[]>();
+
 	// Sound fields
 	private TargetDataLine microfon;
 	private byte[] buf;
 	private ByteArrayOutputStream recordingOutputStream;
 	private SourceDataLine speakers;
+	private StyledDocument doc;
 	private static final AudioFormat format = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 16000.0f, 16, 1, 2,
 			16000.0f, true);
 
@@ -65,11 +82,10 @@ public class ChatWindow extends JFrame implements IClientListener.MessageListene
 			DataLine.Info info = new DataLine.Info(SourceDataLine.class, format);
 			info = new DataLine.Info(TargetDataLine.class, format);
 			microfon = (TargetDataLine) AudioSystem.getLine(info);
-			
+
 			info = new DataLine.Info(SourceDataLine.class, format);
 			speakers = (SourceDataLine) AudioSystem.getLine(info);
 			speakers.open(format, speakers.getBufferSize());
-			speakers.start();
 		} catch (LineUnavailableException ex) {
 			return;
 		}
@@ -111,7 +127,7 @@ public class ChatWindow extends JFrame implements IClientListener.MessageListene
 					recordingOutputStream.close();
 				} catch (Exception e) {
 				}
-				
+
 				if (!chatEnded) {
 					chatEnded = true;
 					try {
@@ -136,15 +152,57 @@ public class ChatWindow extends JFrame implements IClientListener.MessageListene
 		SwingUtilities.invokeLater(new Runnable() {
 			@Override
 			public void run() {
-				ChatWindow.this.mMessagesWindow.append(message + "\n");
+				StyledDocument doc = mMessagesWindow.getStyledDocument();
+				try {
+					doc.insertString(doc.getLength(), message + "\n", null);
+				} catch (BadLocationException e) {
+					e.printStackTrace();
+				}
+				scrollToBottom();
 			}
 		});
 	}
-	
+
 	@Override
 	public void onNewMessage(byte[] audioMessage) {
-		speakers.write(audioMessage, 0, audioMessage.length);
-		speakers.drain();
+		SwingUtilities.invokeLater(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					int id = audioMessages.size();
+					audioMessages.put(id, audioMessage);
+					SimpleAttributeSet keyWord = new SimpleAttributeSet();
+					StyleConstants.setForeground(keyWord, Color.BLUE);
+					keyWord.addAttribute("audiomsg", id);
+					doc.insertString(doc.getLength(), String.format("New audio message (%d)\n", id), keyWord);
+					scrollToBottom();
+				} catch (BadLocationException e) {
+					e.printStackTrace();
+				}
+			}
+		});
+	}
+
+	private void mMessagesWindowMouseClicked(MouseEvent evt) {
+		Element ele = doc.getCharacterElement(mMessagesWindow.viewToModel(evt.getPoint()));
+		AttributeSet as = ele.getAttributes();
+		final int id = as.getAttribute("audiomsg") != null ? (int) as.getAttribute("audiomsg") : -1;
+		if (id != -1)
+			new Thread(new Runnable() {
+				@Override
+				public void run() {
+					byte[] audioMsg = audioMessages.get(id);
+					speakers.start();
+					speakers.write(audioMsg, 0, audioMsg.length);
+					speakers.drain();
+					speakers.stop();
+				}
+			}).start();
+	}
+
+	private void scrollToBottom() {
+		JScrollBar vertical = jScrollPane.getVerticalScrollBar();
+		vertical.setValue(vertical.getMaximum());
 	}
 
 	private void btnRecordActionPerformed(ActionEvent evt) {
@@ -159,37 +217,28 @@ public class ChatWindow extends JFrame implements IClientListener.MessageListene
 				@Override
 				public void run() {
 					Thread.currentThread().setName("Recording-Thread");
+					speakers.start();
 					while (microfon.isOpen()) {
 						int numOfBytesRead = microfon.read(buf, 0, 1024);
 						recordingOutputStream.write(buf, 0, numOfBytesRead);
 						speakers.write(buf, 0, buf.length);
 						buf = new byte[1024];
-					}					
+					}
+					speakers.drain();
+					speakers.stop();
 				}
 			}).start();
-			
-
 		} catch (LineUnavailableException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 
 	private void btnStopActionPerformed(ActionEvent evt) {
 		microfon.close();
-//		try {
-//			recordingOutputStream.close();
-//		} catch (IOException e) {}
-//		new Thread( new Runnable() {
-//			public void run() {
-//				Thread.currentThread().setName("Playback-Thread");
-//				speakers.write(recordingOutputStream.toByteArray(), 0, recordingOutputStream.size());
-//				
-//			}
-//		}).start();
 	}
 
 	private void btnSendActionPerformed(ActionEvent evt) {
+		microfon.close();
 		this.msgSender.sendSoundData(recordingOutputStream.toByteArray(), "");
 	}
 
@@ -206,20 +255,17 @@ public class ChatWindow extends JFrame implements IClientListener.MessageListene
 		mRecord = new javax.swing.JButton();
 		mSend = new javax.swing.JButton();
 		mStop = new javax.swing.JButton();
-		jScrollPane1 = new javax.swing.JScrollPane();
-		mMessagesWindow = new javax.swing.JTextArea();
+		jScrollPane = new javax.swing.JScrollPane();
+		mMessagesWindow = new javax.swing.JTextPane();
 		mNewMsgArea = new javax.swing.JTextField();
+		doc = mMessagesWindow.getStyledDocument();
 
 		mRecord.setText("Snimi");
-
 		mSend.setText("Posalji");
-
 		mStop.setText("Stop");
-
 		mMessagesWindow.setEditable(false);
-		mMessagesWindow.setColumns(20);
-		mMessagesWindow.setRows(5);
-		jScrollPane1.setViewportView(mMessagesWindow);
+
+		jScrollPane.setViewportView(mMessagesWindow);
 
 		mNewMsgArea.addActionListener(new java.awt.event.ActionListener() {
 			public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -244,6 +290,12 @@ public class ChatWindow extends JFrame implements IClientListener.MessageListene
 			}
 		});
 
+		mMessagesWindow.addMouseListener(new java.awt.event.MouseAdapter() {
+			public void mouseClicked(java.awt.event.MouseEvent evt) {
+				mMessagesWindowMouseClicked(evt);
+			}
+		});
+
 		javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
 		jPanel1.setLayout(jPanel1Layout);
 		jPanel1Layout.setHorizontalGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -261,13 +313,13 @@ public class ChatWindow extends JFrame implements IClientListener.MessageListene
 										.addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
 										.addComponent(mStop, javax.swing.GroupLayout.PREFERRED_SIZE, 137,
 												javax.swing.GroupLayout.PREFERRED_SIZE))
-										.addComponent(jScrollPane1))
+										.addComponent(jScrollPane))
 								.addContainerGap()));
 		jPanel1Layout
 				.setVerticalGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
 						.addGroup(javax.swing.GroupLayout.Alignment.TRAILING,
 								jPanel1Layout.createSequentialGroup().addContainerGap()
-										.addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 176,
+										.addComponent(jScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 176,
 												Short.MAX_VALUE)
 										.addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
 										.addComponent(mNewMsgArea, javax.swing.GroupLayout.PREFERRED_SIZE, 53,
