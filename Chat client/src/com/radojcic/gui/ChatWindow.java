@@ -24,6 +24,7 @@ import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Element;
 import javax.swing.text.SimpleAttributeSet;
+import javax.swing.text.Style;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
 
@@ -104,6 +105,24 @@ public class ChatWindow extends JFrame implements IClientListener.MessageListene
 			public void actionPerformed(ActionEvent e) {
 				try {
 					msgSender.sendMessage(e.getActionCommand());
+					
+					SwingUtilities.invokeLater(new Runnable() {
+						@Override
+						public void run() {
+							StyledDocument doc = mMessagesWindow.getStyledDocument();
+							try {
+								
+								SimpleAttributeSet keyWord = new SimpleAttributeSet();
+						        StyleConstants.setForeground(keyWord, Color.gray);
+
+								doc.insertString(doc.getLength(), "Ti: " + e.getActionCommand() + "\n", keyWord);
+							} catch (BadLocationException e) {
+								e.printStackTrace();
+							}
+							scrollToBottom();
+						}
+					});
+					
 					mNewMsgArea.setText("");
 				} catch (ConnectionErrorException ex) {
 					mNewMsgArea.setText("Chat has been disconected.");
@@ -154,7 +173,7 @@ public class ChatWindow extends JFrame implements IClientListener.MessageListene
 			public void run() {
 				StyledDocument doc = mMessagesWindow.getStyledDocument();
 				try {
-					doc.insertString(doc.getLength(), message + "\n", null);
+					doc.insertString(doc.getLength(), String.format("%s: %s\n", chatBuddyName, message), null);
 				} catch (BadLocationException e) {
 					e.printStackTrace();
 				}
@@ -174,7 +193,7 @@ public class ChatWindow extends JFrame implements IClientListener.MessageListene
 					SimpleAttributeSet keyWord = new SimpleAttributeSet();
 					StyleConstants.setForeground(keyWord, Color.BLUE);
 					keyWord.addAttribute("audiomsg", id);
-					doc.insertString(doc.getLength(), String.format("New audio message (%d)\n", id), keyWord);
+					doc.insertString(doc.getLength(), String.format("%s: Nova audio poruka (%d)\n", chatBuddyName, id), keyWord);
 					scrollToBottom();
 				} catch (BadLocationException e) {
 					e.printStackTrace();
