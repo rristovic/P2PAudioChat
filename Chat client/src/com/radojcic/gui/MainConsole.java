@@ -212,6 +212,11 @@ public class MainConsole extends JFrame
 		mMessageWindow = new javax.swing.JTextArea();
 		btnExit = new javax.swing.JButton();
 		btnReconnect = new javax.swing.JButton();
+		
+		mMessageWindow.setBorder(BorderFactory.createCompoundBorder(
+				mMessageWindow.getBorder(), 
+		        BorderFactory.createEmptyBorder(3, 5, 0, 5)));
+
 
 		setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 

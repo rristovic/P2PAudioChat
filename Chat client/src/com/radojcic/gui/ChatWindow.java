@@ -17,6 +17,7 @@ import javax.sound.sampled.DataLine;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 import javax.sound.sampled.TargetDataLine;
+import javax.swing.BorderFactory;
 import javax.swing.JFrame;
 import javax.swing.JScrollBar;
 import javax.swing.SwingUtilities;
@@ -193,7 +194,7 @@ public class ChatWindow extends JFrame implements IClientListener.MessageListene
 					SimpleAttributeSet keyWord = new SimpleAttributeSet();
 					StyleConstants.setForeground(keyWord, Color.BLUE);
 					keyWord.addAttribute("audiomsg", id);
-					doc.insertString(doc.getLength(), String.format("%s: Nova audio poruka (%d)\n", chatBuddyName, id), keyWord);
+					doc.insertString(doc.getLength(), String.format("%s: New audio message (%d)\n", chatBuddyName, id), keyWord);
 					scrollToBottom();
 				} catch (BadLocationException e) {
 					e.printStackTrace();
@@ -278,9 +279,13 @@ public class ChatWindow extends JFrame implements IClientListener.MessageListene
 		mMessagesWindow = new javax.swing.JTextPane();
 		mNewMsgArea = new javax.swing.JTextField();
 		doc = mMessagesWindow.getStyledDocument();
+		
+		mMessagesWindow.setBorder(BorderFactory.createCompoundBorder(
+				mMessagesWindow.getBorder(), 
+		        BorderFactory.createEmptyBorder(3, 5, 0, 5)));
 
-		mRecord.setText("Snimi");
-		mSend.setText("Posalji");
+		mRecord.setText("Record");
+		mSend.setText("Send");
 		mStop.setText("Stop");
 		mMessagesWindow.setEditable(false);
 
